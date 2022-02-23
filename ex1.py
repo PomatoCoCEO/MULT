@@ -37,15 +37,18 @@ def view_image(img, color_map):
     plt.show(block=False)
 
 def image_padding(img):
-    or_shape = img.shape
+    sh = or_shape = img.shape
     last_line = img[len(img)-1,:,:]
-    while(len(img)%16!=0):
-        img = np.vstack((img, [last_line]))
-    last_col = img[:, len(img[0])-1, :]
+    if (len(img)%16!=0):   
+        arr_to_add = np.tile(last_line, (16-len(img)%16,1)).reshape(16-len(img)%16,or_shape[1],3)
+        img = np.vstack((img, arr_to_add))
+
+    last_col = np.array([img[:, len(img[0])-1, :]])
     sh= img.shape
-    while( sh[1]%16!=0):
-        img = np.hstack((img, [last_col]))
-        sh = img.shape
+    if(sh[1]%16!=0):
+        arr_to_add = np.tile(last_col, (1,16-sh[1]%16)).reshape(sh[0], 16-sh[1]%16,3)
+        img = np.hstack((img, arr_to_add))
+
     return img, or_shape
 
 def image_remove_padding(img, shape):
@@ -77,6 +80,7 @@ def encode(img_name):
     plt.imshow(img)
     
     print(img.shape)  # dimensions
+    print("image: ",img)
     #R= img[:,:,0] # red channel
     #print(R.shape) 
     print(img.dtype)  # data typr
@@ -98,39 +102,44 @@ def encode(img_name):
     cmChromBlue = color_map('myCb', tuple(min_cb),  tuple(max_cb) )
     cmChromRed = color_map('myCr', tuple(min_cr),  tuple(max_cr) )
     r,g,b = separate_3channels(img_padded)
-    chromin_image = rbg2ycbcr(img)
+    chromin_image = rbg2ycbcr(img_padded)
     y, cr,cb = separate_3channels(chromin_image)
-    
-    #inverse_chromin = ycbcr_to_rgb(chromin_image)
-    #print(np.array_equal(inverse_chromin,img_padded))
-    
-    #joined= join_rbg(r,g,b)  # to decode later
-    #plt.figure()
-    #plt.imshow(joined)
-    d = {'red':cmRed, 'green': cmGreen, 'blue': cmBlue, 'gray': cmGray, 'chromBlue':cmChromBlue, 'chromRed':cmChromRed }
+
+    d = {'red':cmRed, 'green': cmGreen, 'blue': cmBlue, 'gray': cmGray, 'chromBlue':cmGray, 'chromRed':cmGray }
     e = {'red': r, 'green':g, 'blue':b, 'gray': y, 'chromBlue':cr, 'chromRed':cb}
     for col in d.keys():
         view_image(e[col],d[col])
     print("coisas a acontecer aqui")
+
+
+    return chromin_image, original_shape
+    
+
+    
+
+
+def decode(encoded, shape):
+    inverse_chromin = ycbcr_to_rgb(encoded)
     plt.figure()
     plt.title('depois de ycbcr e da inversão')
     plt.imshow(inverse_chromin)
     plt.show(block=False)
-    
 
-    
+    img = image_remove_padding(inverse_chromin, shape)
+    plt.figure()
+    plt.title('sem padding')
+    plt.imshow(img)
+    plt.show(block=False)
 
+    return img
 
-def decode(encoded):
-    pass
 
 
 def main():
     plt.close('all')
+    encoded , original_shape = encode('imagens/barn_mountains_2.bmp')
+    decoded= decode(encoded, original_shape)
     
-    encode('imagens/peppers.bmp')
-
-
     a=input()
 
 
