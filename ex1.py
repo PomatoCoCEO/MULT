@@ -78,7 +78,7 @@ def image_remove_padding(img, shape):
 # def rgb_to_ycbcr(img):
     trans_matrix= np.array([[0.299,0.587,0.114],[-0.168736, -0.331264, 0.5],[0.5, -0.418688, -0.081312]])
 
-def ycbcr_to_rgb(img):
+def ycbcr2rgb(img):
     img[:,:,1:3] -= 128
     recovered = img.dot(YCBCR2RGB.T)
     recovered[recovered < 0]=0
@@ -233,7 +233,7 @@ def decode(dct_y,dct_cb,dct_cr, ds_ratio, original_shape):
     #     view_image(e[col],d[col])
     encoded= join_3channels(y_u,cb_u,cr_u)
 
-    inverse_chromin = ycbcr_to_rgb(encoded)
+    inverse_chromin = ycbcr2rgb(encoded)
     plt.figure()
     plt.title('depois de ycbcr e da inversão')
     plt.imshow(inverse_chromin)
