@@ -91,6 +91,34 @@ def rbg2ycbcr(img):
     ycc[:,:,1:3] += 128
     return ycc
 
+def cv2_downsample(y,cr,cb, comp_ratio):
+    sh_cr= cr.shape
+    sh_cb= cb.shape
+    if comp_ratio[2]!= 0: #horizontal only
+        cr_ratio= comp_ratio[0]//comp_ratio[1]
+        cb_ratio= comp_ratio[0]//comp_ratio[2]
+        sh_cb[1] = sh_cb[1]/cb_ratio
+        sh_cr[1] = sh_cr[1]/cr_ratio
+        cr_d = cv2.resize(cr, sh_cr, interpolation = cv2.INTER_AREA)
+        cb_d = cv2.resize(cb, sh_cb, interpolation = cv2.INTER_AREA)
+        
+    else:
+        cb_ratio=cr_ratio=comp_ratio[0]//comp_ratio[1]
+        sh_cb[0] = sh_cb[0]/cb_ratio
+        sh_cb[1] = sh_cb[1]/cb_ratio
+        sh_cr[0] = sh_cr[0]/cb_ratio
+        sh_cr[1] = sh_cr[1]/cb_ratio
+    
+        cr_d = cv2.resize(cr, sh_cr, interpolation = cv2.INTER_AREA)
+        cb_d = cv2.resize(cb, sh_cb, interpolation = cv2.INTER_AREA)
+    return y, cr_d, cb_d
+
+def cv2_upsampling(y_d, cr_d, cb_d, comp_ratio):
+    sh_y= y.shape
+    cr = cv2.resize(cr_d, sh_y, interpolation = cv2.INTER_AREA)
+    cb = cv2.resize(cb_d, sh_y, interpolation = cv2.INTER_AREA)
+    return y_d, cr,cb
+
 def ycrcb_downsampling(y,cr,cb, comp_ratio): # comp_ratio is a tuple with 3 values, such as (4,2,2)
     cr_d=cb_d=np.array([])
     
@@ -137,6 +165,13 @@ def dct_channel(channel):
 
 def idct_channel(dct_channel_arr):
     return idct(idct(dct_channel_arr, norm="ortho").T, norm="ortho").T
+
+
+
+def dct_8x8(channel, block_size):
+    n_array= np.zeros(channel.shape)
+
+    n_array[]
 
 def encode(img_name, ds_rate: tuple) -> None:
     img= plt.imread(img_name)
