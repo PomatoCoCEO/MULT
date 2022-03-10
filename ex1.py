@@ -56,21 +56,20 @@ def view_image(img, color_map,title="<untitled>"):
     plt.imshow(img, color_map)
     plt.show(block=False)
 
-def image_padding(img):
+def image_padding(img, mult):
     sh = or_shape = img.shape
     last_line = img[len(img)-1,:,:]
-    if (len(img)%16!=0):   
-        arr_to_add = np.tile(last_line, (16-len(img)%16,1)).reshape(16-len(img)%16,or_shape[1],3)
+    if (len(img)%mult!=0):   
+        arr_to_add = np.tile(last_line, (mult-len(img)%mult,1)).reshape(mult-len(img)%mult,or_shape[1],3)
         img = np.vstack((img, arr_to_add))
 
     last_col = np.array([img[:, len(img[0])-1, :]])
     sh= img.shape
-    if(sh[1]%16!=0):
-        arr_to_add = np.tile(last_col, (1,16-sh[1]%16)).reshape(sh[0], 16-sh[1]%16,3)
+    if(sh[1]%mult!=0):
+        arr_to_add = np.tile(last_col, (1,mult-sh[1]%mult)).reshape(sh[0], mult-sh[1]%mult,3)
         img = np.hstack((img, arr_to_add))
 
     return img, or_shape
-
 def image_remove_padding(img, shape):
     h,c = shape[0], shape[1]
     return img[:h,:c,:]
@@ -167,24 +166,66 @@ def idct_channel(dct_channel_arr):
     return idct(idct(dct_channel_arr, norm="ortho").T, norm="ortho").T
 
 
+def dct_by_blocks(image, bs):
+    sh =image.shape
+    ans= np.zeros(image.shape)
+    for i in range(0,sh[0],bs):
+        for j in range(0,sh[1],bs):
+            portion = image[i:i+bs, j:j+bs]
+            ans[i:i+bs, j:j+bs] = dct_channel(portion)
+    return ans
 
-def dct_8x8(channel, block_size):
-    n_array= np.zeros(channel.shape)
 
-    n_array[]
+def idct_by_blocks(dct_image, bs):
+    sh =dct_image.shape
+    ans= np.zeros(dct_image.shape)
+    for i in range(0,sh[0],bs):
+        for j in range(0,sh[1],bs):
+            portion = dct_image[i:i+bs, j:j+bs]
+            ans[i:i+bs, j:j+bs] = idct_channel(portion)
+    return ans
+
+
+
+def ex7_2_2():
+    y_dct8 =  dct_by_blocks(y_d,8)
+    cb_dct8 = dct_by_blocks(cb_d,8)
+    cr_dct8 = dct_by_blocks(cr_d,8)
+    arrplot= [('y',y_dct8),('cb',cb_dct8),('cr',cr_dct8)]
+    for s,p in arrplot:
+        view_image(p,cmGray,s)
+    y_idct8 =  idct_by_blocks( y_dct8,8)
+    cb_idct8 = idct_by_blocks(cb_dct8,8)
+    cr_idct8 = idct_by_blocks(cr_dct8,8)
+    arrplot= [('y',cmGray,y_idct8),('cb',cmChromBlue,cb_idct8),('cr',cmChromRed,cr_idct8)]
+    for s,c,p in arrplot:
+        view_image(p,c,s)
+    eqs1 = [y_idct8,cb_idct8,cr_idct8]
+    eqs2 = [y_d,cb_d,cr_d]
+    equals=0
+    for i in range(len(eqs1)):
+        howmany=np.count_nonzero(np.abs(eqs1[i]-eqs2[i])>0.000001)
+        if howmany==0: 
+            equals +=1
+        else:
+            print('no of different pixels: ',np.count_nonzero(np.abs(eqs1[i]-eqs2[i])>0.000001))
+            view_image(eqs1[i],cmGray)
+            view_image(eqs2[i],cmGray)
+            view_image(eqs2[i]-eqs1[i],cmGray)
+    print('No. of equal channels: ',equals)
 
 def encode(img_name, ds_rate: tuple) -> None:
     img= plt.imread(img_name)
     # plt.figure()
     # plt.imshow(img)
     
-    print(img.shape)  # dimensions
-    print("image: ",img)
+    # print(img.shape)  # dimensions
+    # print("image: ",img)
     #R= img[:,:,0] # red channel
     #print(R.shape) 
-    print(img.dtype)  # data typr
+    # print(img.dtype)  # data typr
 
-    img_padded , original_shape = image_padding(img)
+    img_padded , original_shape = image_padding(img,16)
 
     cmRed = color_map('myRed', (0,0,0),(1,0,0))
     cmGreen = color_map('myGreen', (0,0,0),(0,1,0) )
@@ -223,6 +264,12 @@ def encode(img_name, ds_rate: tuple) -> None:
     dct_cb = dct_channel(cb_d)
     dct_cr = dct_channel(cr_d)
     dcts= {"y":dct_y,"cb":dct_cb,"cr":dct_cr}
+    y_dct8 =   dct_by_blocks(y_d,64)
+    cb_dct8 = dct_by_blocks(cb_d,64)
+    cr_dct8 = dct_by_blocks(cr_d,64)
+    arrplot= [('y',y_dct8),('cb',cb_dct8),('cr',cr_dct8)]
+    for s,p in arrplot:
+        view_image(p,cmGray,s)
     # for name, channel in dcts.items():
     #     fig = plt.figure()
     #     plt.title(f"{name} dct - log(x+0.0001)")
@@ -286,9 +333,9 @@ def decode(dct_y,dct_cb,dct_cr, ds_ratio, original_shape):
 
 def main():
     # plt.close('all')
-    ex1()
+    # ex1()
     ds_ratio = (4,2,2)
-    dct_y, dct_cb, dct_cr, original_shape = encode('imagens/barn_mountains_2.bmp', ds_ratio)
+    dct_y, dct_cb, dct_cr, original_shape = encode('imagens/peppers.bmp', ds_ratio)
     decoded= decode(dct_y, dct_cb, dct_cr, ds_ratio, original_shape)
     
     a=input()
@@ -299,6 +346,6 @@ def main():
 
 
 if __name__ == "__main__":
-    ex1()
+    # ex1()
+    main()
     a=input()
-    # main()
