@@ -90,6 +90,7 @@ def rbg2ycbcr(img):
     ycc[:,:,1:3] += 128
     return ycc
 
+#does not work
 def cv2_downsample(y,cr,cb, comp_ratio):
     sh_cr= cr.shape
     sh_cb= cb.shape
@@ -112,6 +113,7 @@ def cv2_downsample(y,cr,cb, comp_ratio):
         cb_d = cv2.resize(cb, sh_cb, interpolation = cv2.INTER_AREA)
     return y, cr_d, cb_d
 
+#does not work
 def cv2_upsampling(y_d, cr_d, cb_d, comp_ratio):
     sh_y= y.shape
     cr = cv2.resize(cr_d, sh_y, interpolation = cv2.INTER_AREA)
