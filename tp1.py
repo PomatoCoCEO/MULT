@@ -44,6 +44,19 @@ def separate_3channels(image):
 def join_3channels(r,g,b):
     return  np.dstack((r,g,b))
 
+def ex3():
+    #3.1 - reading barn_mountains.bmp
+    img_bm = plt.imread("imagens/barn_mountains.bmp")
+
+    #3.5 - channel visualization
+    r,g,b = separate_3channels(img_bm)
+    
+
+    d = {'red':cmRed, 'green': cmGreen, 'blue': cmBlue }
+    e = {'red': r, 'green':g, 'blue':b}
+    for col in d.keys():
+        view_image(e[col],d[col], col)
+    return img_bm
 
 
 def image_padding(img, ds_rate, bs):
@@ -73,6 +86,14 @@ def image_remove_padding(img, shape):
     h,c = shape[0], shape[1]
     return img[:h,:c,:]
 
+def ex4():
+    print("Original image shape: ",img_bm.shape)
+    img_bm_padded, original_shape = image_padding(img_bm, (4,2,2), 8)
+    print("Padded image shape: ",img_bm_padded.shape)
+    img_bm_no_padding = image_remove_padding(img_bm_padded, original_shape)
+    print("Image with padding removed shape: ",img_bm_no_padding.shape)
+    print("Removal correct? " , np.array_equal(img_bm_no_padding, img_bm))
+    return img_bm_padded
 
 def compare_3channels(ch1_1, ch2_1, ch3_1, ch1_2, ch2_2, ch3_2):
     eqs1 = [ch1_1, ch2_1, ch3_1]
@@ -115,6 +136,17 @@ def ycbcr2rgb(img):
     recovered= np.round(recovered)
     return recovered.astype(np.uint8)
 
+def ex5():
+    chromin_image = rbg2ycbcr(img_bm_padded)
+    
+    y, cb,cr = separate_3channels(chromin_image)
+
+    d = {'gray': cmGray,  'chromBlue':cmChromBlue, 'chromRed':cmChromRed }
+    e = {'gray': y, 'chromBlue':cb, 'chromRed':cr}
+    for col in d.keys():
+        view_image(e[col],d[col],col)
+    return y,cb,cr
+
 
 def ycrcb_downsampling_cv2(y,cr,cb, comp_ratio): # comp_ratio is a tuple with 3 values, such as (4,2,2)
     cr_d=cb_d=np.array([])
@@ -148,6 +180,18 @@ def ycrcb_upsampling_cv2(y,cr,cb, comp_ratio): # comp_ratio is a tuple with 3 va
     return y, cr_u, cb_u
 
 
+def ex6():
+    ds_ratio = (4,2,0)
+    y_d,cr_d,cb_d = ycrcb_downsampling_cv2(y,cr,cb, ds_ratio)
+    d = {'gray': cmGray,  'chromBlue':cmChromBlue, 'chromRed':cmChromRed }
+    e = {'gray': y_d, 'chromBlue':cb_d, 'chromRed':cr_d}
+
+    for col in d.keys():
+        view_image(e[col],d[col],"%s with shape %s"%(col,e[col].shape))
+    (y_u,cr_u,cb_u) = ycrcb_upsampling_cv2(y_d,cr_d,cb_d, ds_ratio)
+        
+    return y_d, cb_d, cr_d
+
 
 #7 - DCT
 def dct_array(channel):
@@ -173,6 +217,34 @@ def idct_image(dct_y, dct_cb, dct_cr):
     idct_cb = idct_array(dct_cb)
     idct_cr = idct_array(dct_cr)
     return idct_y, idct_cb, idct_cr
+
+def ex7():
+    dct_y, dct_cb, dct_cr = dct_image(y_d, cb_d, cr_d)
+    dcts= {"y":dct_y,"cb":dct_cb,"cr":dct_cr}
+    idct_y, idct_cb, idct_cr = idct_image(dct_y, dct_cb, dct_cr)
+    idcts = {"y":idct_y,"cb":idct_cb,"cr":idct_cr}
+    for name, channel in dcts.items():
+        fig = plt.figure()
+        # plt.title(f"{name} dct - log(2*x/sqrt(M*N)+0.0001)")
+        channel_size =channel.shape[0] * channel.shape[1]
+        # sh = plt.imshow(np.log(np.abs(2*channel/math.sqrt(channel_size)) + 0.0001))
+        plt.title(f"{name} dct - log(abs(x)+0.0001)")
+        sh = plt.imshow(np.log(np.abs(channel) + 0.0001))
+        fig.colorbar(sh)
+        plt.show(block=False)
+    eqs1 = [idct_y,idct_cb,idct_cr]
+    eqs2 = [y_d,cb_d,cr_d]
+    equals=0
+    for i in range(len(eqs1)):
+        howmany=np.count_nonzero(np.abs(eqs1[i]-eqs2[i])>0.000001)
+        if howmany==0: 
+            equals +=1
+        else:
+            print('no of different pixels: ',np.count_nonzero(np.abs(eqs1[i]-eqs2[i])>0.000001))
+            view_image(eqs1[i],cmGray)
+            view_image(eqs2[i],cmGray)
+            view_image(eqs2[i]-eqs1[i],cmGray)
+    print('No. of equal channels: ',equals)
 
 
 
@@ -206,6 +278,29 @@ def idct_by_blocks(y_dct, cb_dct, cr_dct,bs):
     cr_idct= idct_channel_by_blocks(cr_dct, bs)
     return y_idct, cb_idct, cr_idct
 
+def ex7_23(y_d, cb_d, cr_d, bs):
+    y_dct, cb_dct, cr_dct =  dct_by_blocks(y_d, cb_d, cr_d, bs)
+    arrplot= [('y',y_dct),('cb',cb_dct),('cr',cr_dct)]
+    for s,p in arrplot:
+        view_image(np.log(np.abs(p)+0.0001),cmGray,s)
+    y_idct, cb_idct,cr_idct =  idct_by_blocks( y_dct, cb_dct, cr_dct,bs)
+    arrplot= [('y',cmGray,y_idct),('cb',cmChromBlue,cb_idct),('cr',cmChromRed,cr_idct)]
+    for s,c,p in arrplot: # Visualization of the inverse images
+        view_image(p,c,s)
+    eqs1 = [y_idct,cb_idct,cr_idct]
+    eqs2 = [y_d,cb_d,cr_d]
+    equals=0
+    for i in range(len(eqs1)):
+        howmany=np.count_nonzero(np.abs(eqs1[i]-eqs2[i])>0.000001)
+        if howmany==0: 
+            equals +=1
+        else:
+            print('no of different pixels: ',np.count_nonzero(np.abs(eqs1[i]-eqs2[i])>0.000001))
+            view_image(eqs1[i],cmGray)
+            view_image(eqs2[i],cmGray)
+            view_image(eqs2[i]-eqs1[i],cmGray)
+    print('No. of equal channels: ',equals)
+    return y_dct, cb_dct, cr_dct
 
 QUANTIZATION_MATRIX_Y = np.array([[16,11,10,16,24,40,51,61],[12,12,14,19,26,58,60,55],[14,13,16,24,40,57,69,56],[14,17,22,29,51,87,80,62],[18,22,37,56,68,109,103,77],[24,35,55,64,81,104,113,92],[49,64,78,87,103,121,120,101],[72,92,95,98,112,100,103,99]]).astype(np.uint8)
 QUANTIZATION_MATRIX_CBCR = np.array([[17,18,24,47,99,99,99,99],[18,21,26,66,99,99,99,99],[24,26,56,99,99,99,99,99],[47,66,99,99,99,99,99,99],[99,99,99,99,99,99,99,99],[99,99,99,99,99,99,99,99],[99,99,99,99,99,99,99,99],[99,99,99,99,99,99,99,99]]).astype(np.uint8)
